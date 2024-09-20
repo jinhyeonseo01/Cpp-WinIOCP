@@ -10,7 +10,7 @@ int main(int argc, char* argv[])
 	std::memset(&sockAddress, 0, sizeof(sockAddress));
 
 	inet_pton(AF_INET, "127.0.0.1", &sockAddress.sin_addr);
-	sockAddress.sin_port = htons(56671);
+	sockAddress.sin_port = htons(56672);
 
 	SOCKET sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (sock != 0)
