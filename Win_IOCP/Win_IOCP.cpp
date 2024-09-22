@@ -63,68 +63,9 @@ void err_display(int errcode)
 // TCP 서버(IPv4)
 DWORD WINAPI TCPServer4(LPVOID arg)
 {
-	int retval;
+	
 
-	// 소켓 생성
-	SOCKET listen_sock = socket(AF_INET, SOCK_STREAM, 0);
-	if (listen_sock == INVALID_SOCKET) err_quit("socket()");
 
-	// bind()
-	struct sockaddr_in serveraddr;
-	memset(&serveraddr, 0, sizeof(serveraddr));
-	serveraddr.sin_family = AF_INET;
-	serveraddr.sin_addr.s_addr = htonl(INADDR_ANY);
-	serveraddr.sin_port = htons(SERVERPORT);
-	retval = bind(listen_sock, (struct sockaddr*)&serveraddr, sizeof(serveraddr));
-	if (retval == SOCKET_ERROR) err_quit("bind()");
-
-	// listen()
-	retval = listen(listen_sock, SOMAXCONN);
-	if (retval == SOCKET_ERROR) err_quit("listen()");
-
-	// 데이터 통신에 사용할 변수
-	SOCKET client_sock;
-	struct sockaddr_in clientaddr;
-	int addrlen;
-	char buf[BUFSIZE + 1];
-
-	while (1) {
-		// accept()
-		addrlen = sizeof(clientaddr);
-		client_sock = accept(listen_sock, (struct sockaddr*)&clientaddr, &addrlen);
-		if (client_sock == INVALID_SOCKET) {
-			err_display("accept()");
-			break;
-		}
-
-		// 접속한 클라이언트 정보 출력
-		printf("\n[TCP 서버] 클라이언트 접속: IP 주소=%s, 포트 번호=%d\n",
-			inet_ntoa(clientaddr.sin_addr), ntohs(clientaddr.sin_port));
-
-		// 클라이언트와 데이터 통신
-		while (1) {
-			// 데이터 받기
-			retval = recv(client_sock, buf, BUFSIZE, 0);
-			if (retval == SOCKET_ERROR) {
-				err_display("recv()");
-				break;
-			}
-			else if (retval == 0)
-				break;
-
-			// 받은 데이터 출력
-			buf[retval] = '\0';
-			printf("%s", buf);
-		}
-
-		// 소켓 닫기
-		closesocket(client_sock);
-		printf("[TCP 서버] 클라이언트 종료: IP 주소=%s, 포트 번호=%d\n",
-			inet_ntoa(clientaddr.sin_addr), ntohs(clientaddr.sin_port));
-	}
-
-	// 소켓 닫기
-	closesocket(listen_sock);
 	return 0;
 }
 
@@ -202,21 +143,23 @@ DWORD WINAPI TCPServer6(LPVOID arg)
 	return 0;
 }
 
+int isLittleEndian()
+{
+	uint16_t splitData = 0x0001;
+	return *reinterpret_cast<const uint8_t*>(&splitData);
+}
+
 int main(int argc, char* argv[])
 {
 	// 윈속 초기화
 	WSADATA wsa;
-	std::cout << "1234\n";
+	
 	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
 		return 1;
+	
+	printf("System Endian : %s", isLittleEndian() ? "Little Endian" : "Big Endian");
+	
 
-	// 멀티스레드를 이용하여 두 개의 서버를 동시에 구동한다.
-	HANDLE hThread[2];
-	hThread[0] = CreateThread(NULL, 0, TCPServer4, NULL, 0, NULL);
-	hThread[1] = CreateThread(NULL, 0, TCPServer6, NULL, 0, NULL);
-	WaitForMultipleObjects(2, hThread, TRUE, INFINITE);
-
-	// 윈속 종료
 	WSACleanup();
 	return 0;
 }
