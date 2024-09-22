@@ -10,8 +10,6 @@
 #include <string.h> // strncpy(), ...
 
 #include <iostream>
-#include <algorithm>
-#include <array>
 
 #pragma comment(lib, "ws2_32") // ws2_32.lib ¸µÅ©
 
