@@ -18,57 +18,56 @@ int main(int argc, char* argv[])
 	WSADATA data;
 	if (WSAStartup(MAKEWORD(2, 2), &data) != 0)
 		return 0;
-	std::string originalDomainName; // www.pinterest.com
-	std::string splitDomainName;
 
-	std::cin >> originalDomainName;
+	sockaddr_in addr;
+	memset(&addr, 0, sizeof(addr));
+	//inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr);
+	addr.sin_addr.s_addr = 0;
+	addr.sin_family = AF_INET;
+	addr.sin_port = htons(12345);
 
-	std::string targetKeyword = "www";
-	size_t size = originalDomainName.find(targetKeyword);
+	SOCKET sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
-	if (size != std::string::npos) {
-		size += targetKeyword.size() + 1;
-		splitDomainName = originalDomainName.substr(size, originalDomainName.size() - size);
+	int a = bind(sock, (sockaddr*)&addr, sizeof(addr));
+	printf("%d\n", a);
+	int b = listen(sock, 10);
+	printf("%d\n", b);
+	//int c = accept(sock, (sockaddr*)&addr, sizeof(addr));
+
+	SOCKET client_sock;
+	struct sockaddr_in clientaddr;
+	int addrlen;
+
+	addrlen = sizeof(clientaddr);
+	client_sock = accept(sock, (struct sockaddr*)&clientaddr, &addrlen);
+	if (client_sock == INVALID_SOCKET) {
+		err_display("accept()");
 	}
-	else
-		splitDomainName = originalDomainName;
-
-
-
-	struct hostent* domainInfo;
-	in_addr addr;
-	std::array<char, 22> arr;
-	int count = 0;
-
-	domainInfo = gethostbyname(splitDomainName.c_str());
-
-	if (domainInfo != nullptr)
+	printf("Connect!\n");
+	char buf[1000];
+	while (1)
 	{
-		for (count = 0; domainInfo->h_addr_list[count] != NULL; count++);
-		std::cout << "IP 갯수 : " << count << "\n";
-		for (int j = 0; domainInfo->h_addr_list[j] != NULL; j++)
-		{
-			inet_ntop(AF_INET, &addr, arr.data(), arr.size());
-			memcpy(&addr, domainInfo->h_addr_list[j], domainInfo->h_length);
-			std::cout << arr.data() << "\n";
+		int retval = recv(client_sock, buf, 1000, MSG_WAITALL);
+		if (retval == SOCKET_ERROR) {
+			err_display("recv()");
+			break;
 		}
+		else if (retval == 0)
+			break;
 
-		std::cout << "\n\n";
-	}
+		// 받은 데이터 출력
+		buf[retval] = '\0';
+		printf("[TCP/%s:%d] %s\n", addr, ntohs(clientaddr.sin_port), buf);
 
-
-	domainInfo = gethostbyname(originalDomainName.c_str());
-	if (domainInfo != nullptr)
-	{
-		for (count = 0; domainInfo->h_aliases[count] != NULL; count++);
-			std::cout << "별명 갯수 : " << count << "\n";
-		for (int j = 0; domainInfo->h_aliases[j] != NULL; j++)
-		{
-			std::array<char, 200> arr;
-			memcpy(arr.data(), domainInfo->h_aliases[j], strlen(domainInfo->h_aliases[j]) + 1);
-			std::cout << arr.data() << "\n";
+		// 데이터 보내기
+		retval = send(client_sock, buf, retval, 0);
+		if (retval == SOCKET_ERROR) {
+			err_display("send()");
+			break;
 		}
 	}
+	scanf("%d");
+	//accept()
 
 	WSACleanup();
 	return 0;

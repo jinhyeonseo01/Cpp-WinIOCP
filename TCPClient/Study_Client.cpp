@@ -38,32 +38,33 @@ int main(int argc, char *argv[])
 	// connect()
 	struct sockaddr_in serveraddr;
 	memset(&serveraddr, 0, sizeof(serveraddr));
+	inet_pton(AF_INET, "127.0.0.1", &serveraddr.sin_addr);
 	serveraddr.sin_family = AF_INET;
-	inet_pton(AF_INET, SERVERIP, &serveraddr.sin_addr);
-	serveraddr.sin_port = htons(SERVERPORT);
+	serveraddr.sin_port = htons(12345);
+
+
 	retval = connect(sock, (struct sockaddr *)&serveraddr, sizeof(serveraddr));
 	if (retval == SOCKET_ERROR) err_quit("connect()");
 
-	// 데이터 통신에 사용할 변수
-	char buf[BUFSIZE + 1];
-	int len;
+	printf("Connect!\n");
 
-	// 서버와 데이터 통신
 	while (1) {
 		// 데이터 입력
 		printf("\n[보낼 데이터] ");
-		if (fgets(buf, BUFSIZE + 1, stdin) == NULL)
-			break;
+		char d[100];
+		scanf("%s", &d);
+		//if (fgets(buf, BUFSIZE + 1, stdin) == NULL)
+//			break;
 
 		// '\n' 문자 제거
-		len = (int)strlen(buf);
-		if (buf[len - 1] == '\n')
-			buf[len - 1] = '\0';
-		if (strlen(buf) == 0)
+		int len = (int)strlen(d);
+		//if (d[len - 1] == '\n')
+		//	d[len - 1] = '\0';
+		if (strlen(d) == 0)
 			break;
 
 		// 데이터 보내기
-		retval = send(sock, buf, (int)strlen(buf), 0);
+		retval = send(sock, d, (int)strlen(d), 0);
 		if (retval == SOCKET_ERROR) {
 			err_display("send()");
 			break;
@@ -71,7 +72,7 @@ int main(int argc, char *argv[])
 		printf("[TCP 클라이언트] %d바이트를 보냈습니다.\n", retval);
 
 		// 데이터 받기
-		retval = recv(sock, buf, retval, MSG_WAITALL);
+		retval = recv(sock, d, retval, MSG_WAITALL);
 		if (retval == SOCKET_ERROR) {
 			err_display("recv()");
 			break;
@@ -80,9 +81,9 @@ int main(int argc, char *argv[])
 			break;
 
 		// 받은 데이터 출력
-		buf[retval] = '\0';
+		d[retval] = '\0';
 		printf("[TCP 클라이언트] %d바이트를 받았습니다.\n", retval);
-		printf("[받은 데이터] %s\n", buf);
+		printf("[받은 데이터] %s\n", d);
 	}
 
 	// 소켓 닫기
