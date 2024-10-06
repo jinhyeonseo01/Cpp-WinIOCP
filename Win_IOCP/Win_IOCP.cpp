@@ -1,4 +1,6 @@
-﻿#include "Common.h"
+﻿#include <deque>
+
+#include "Common.h"
 
 int main(int argc, char* argv[])
 {
@@ -20,7 +22,7 @@ int main(int argc, char* argv[])
 		printf("%d\n", ((unsigned char*)&intAddr)[i]);
 	printf("%s\n", arr.data());
 
-	//inet_pton(AF_INET, "127.0.0.1", &sockAddress.sin_addr);
+
 	sockAddress.sin_addr = addr;
 	sockAddress.sin_port = htons(56672);
 	
