@@ -97,10 +97,8 @@ int main(int argc, char* argv[])
 	}
 	printf("수신완료\n");
 	printf("저장중\n");
-	
-	std::string originalName = fileName.substr(0,std::find(fileName.begin(), fileName.end(), '.') - fileName.begin());
-	std::string ext = fileName.substr(std::find(fileName.begin(), fileName.end(), '.') - fileName.begin() + 1);
-	std::ofstream os(originalName+"(download)." + ext, std::ios::binary);
+
+	std::ofstream os(fileName, std::ios::binary);
 
 	for (int i = 0; i < fileData.size(); i++)
 		os.write((char*)&fileData[i], 1);
