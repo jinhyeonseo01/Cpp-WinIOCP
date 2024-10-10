@@ -34,9 +34,21 @@ void clearConsole() {
 #endif
 }
 
+
+int Test(void* arg)
+{
+
+	return 0;
+}
+
+
 int main(int argc, char *argv[])
 {
 	int retval;
+
+	CreateThread(0,0, Test,0,0, 0);
+
+
 
 	// 명령행 인수가 있으면 IP 주소로 사용
 	if (argc > 2)
@@ -69,7 +81,6 @@ int main(int argc, char *argv[])
 
 	for (int i = 0; i < fileName.size(); i++)
 		fileData.emplace_back(fileName.data()[i]);
-	
 
 
 	char buffer;
@@ -138,3 +149,4 @@ int main(int argc, char *argv[])
 	WSACleanup();
 	return 0;
 }
+
