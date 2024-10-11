@@ -1,7 +1,7 @@
 #include "Common.h"
 
-char* SERVERIP = (char*)"127.0.0.1";
-#define SERVERPORT 9000
+char* SERVERIP = (char*)"clrain.ggm.kr";
+#define SERVERPORT 56672
 #define BUFSIZE    512
 
 int main(int argc, char* argv[])
@@ -24,7 +24,9 @@ int main(int argc, char* argv[])
 	struct sockaddr_in serveraddr;
 	memset(&serveraddr, 0, sizeof(serveraddr));
 	serveraddr.sin_family = AF_INET;
-	inet_pton(AF_INET, SERVERIP, &serveraddr.sin_addr);
+	//inet_pton(AF_INET, SERVERIP, &serveraddr.sin_addr);
+	memcpy(&serveraddr.sin_addr, gethostbyname(SERVERIP)->h_addr, 4);
+
 	serveraddr.sin_port = htons(SERVERPORT);
 	retval = connect(sock, (struct sockaddr*)&serveraddr, sizeof(serveraddr));
 	if (retval == SOCKET_ERROR) err_quit("connect()");
