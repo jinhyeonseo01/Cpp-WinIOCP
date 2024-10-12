@@ -148,6 +148,9 @@
   <ItemGroup>
     <ClCompile Include="Study_Client.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Common.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

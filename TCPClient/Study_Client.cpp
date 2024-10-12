@@ -1,81 +1,115 @@
 #include "Common.h"
 
-char* SERVERIP = (char*)"clrain.ggm.kr";
-#define SERVERPORT 56672
-#define BUFSIZE    512
 
 int main(int argc, char* argv[])
 {
-	int retval;
+	char** parameter;
+#ifdef _DEBUG
+	parameter = new char*[argc = 3];
+	parameter[0] = (char*)"Client";
+	parameter[1] = (char*)"127.0.0.1";
+	parameter[2] = (char*)"test.txt";
+#else
+	parameter = argv;
+#endif
 
-	// 명령행 인수가 있으면 IP 주소로 사용
-	if (argc > 1) SERVERIP = argv[1];
+	std::string serverIP;
+	std::string fileName;
+	long long int fileSize;
 
-	// 윈속 초기화
+	if (argc > 2) {
+		serverIP = parameter[1];
+		fileName = std::string(parameter[2], parameter[2] + strlen(parameter[2]));
+		std::cout <<"파일 읽는 중 : "<< fileName <<"\n";
+	}
+
+	std::ifstream is{ fileName, std::ios::binary };
+	std::deque<char> fileData;
+	{
+		if (!is) {
+			printf("파일 읽기 실패\n");
+			return -1;
+		}
+
+		is.seekg(0, std::ios::end);
+		fileSize = is.tellg();
+		is.seekg(0, std::ios::beg);
+	}
+
+	Packet packet;
+	char readData;
+
+	packet.Clear();
+	packet.PushData(fileName.size());
+	packet.PushData(fileName.begin(), fileName.end());
+	packet.PushData(fileSize);
+	for (int i = 0; i < fileSize; i++) {
+		is.read(&readData, 1);
+		packet.PushData(readData);
+	}
+
+	packet.Marking();
+	packet.PushSize();
+	int fullSize;
+	packet.PeekData(fullSize);
+
 	WSADATA wsa;
 	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
 		return 1;
 
-	// 소켓 생성
-	SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
-	if (sock == INVALID_SOCKET) err_quit("socket()");
+	SOCKET serverSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if (serverSocket == INVALID_SOCKET) err_quit("socket()");
 
-	// connect()
 	struct sockaddr_in serveraddr;
 	memset(&serveraddr, 0, sizeof(serveraddr));
 	serveraddr.sin_family = AF_INET;
-	//inet_pton(AF_INET, SERVERIP, &serveraddr.sin_addr);
-	memcpy(&serveraddr.sin_addr, gethostbyname(SERVERIP)->h_addr, 4);
+	bool isDomain = false;
+	for (const char& c : serverIP)
+		if (isalpha(c))
+			isDomain = true;
+	if(isDomain)
+		memcpy(&serveraddr.sin_addr, gethostbyname(serverIP.c_str())->h_addr, 4);
+	else
+		inet_pton(AF_INET, serverIP.c_str(), &serveraddr.sin_addr);
+	serveraddr.sin_port = htons(56672);
 
-	serveraddr.sin_port = htons(SERVERPORT);
-	retval = connect(sock, (struct sockaddr*)&serveraddr, sizeof(serveraddr));
-	if (retval == SOCKET_ERROR) err_quit("connect()");
+	SocketCheck(connect(serverSocket, (sockaddr*)&serveraddr, sizeof(serveraddr)));
+	printf("Connect!\n");
 
-	// 데이터 통신에 사용할 변수
-	char buf[BUFSIZE + 1];
-	int len;
 
-	// 서버와 데이터 통신
-	while (1) {
-		// 데이터 입력
-		printf("\n[보낼 데이터] ");
-		if (fgets(buf, BUFSIZE + 1, stdin) == NULL)
-			break;
+	CONSOLE_SCREEN_BUFFER_INFO csbi;
+	GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
+	COORD coord = csbi.dwCursorPosition;
 
-		// '\n' 문자 제거
-		len = (int)strlen(buf);
-		if (buf[len - 1] == '\n')
-			buf[len - 1] = '\0';
-		if (strlen(buf) == 0)
-			break;
+	std::array<char, 1024> packetData;
 
-		// 데이터 보내기
-		retval = send(sock, buf, (int)strlen(buf), 0);
-		if (retval == SOCKET_ERROR) {
+	int offset = 0;
+	int size = packetData.size();
+	while (true)
+	{
+		size = packetData.size();
+		packet.PopData(packetData.data(), size);
+		int sendSize = send(serverSocket, packetData.data(), size, 0);
+		packet.BackOffset(size, sendSize);
+		if (sendSize == SOCKET_ERROR) {
 			err_display("send()");
 			break;
 		}
-		printf("[TCP 클라이언트] %d바이트를 보냈습니다.\n", retval);
-
-		// 데이터 받기
-		retval = recv(sock, buf, retval, MSG_WAITALL);
-		if (retval == SOCKET_ERROR) {
-			err_display("recv()");
-			break;
-		}
-		else if (retval == 0)
+		if (sendSize == 0)
 			break;
 
-		// 받은 데이터 출력
-		buf[retval] = '\0';
-		printf("[TCP 클라이언트] %d바이트를 받았습니다.\n", retval);
-		printf("[받은 데이터] %s\n", buf);
+		SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
+		printf("전송중 : %lf%%    \n", packet.Offset() / (double)packet.Size() * 100);
+
 	}
 
-	// 소켓 닫기
-	closesocket(sock);
+	printf("전송완료\n");
 
-	// 윈속 종료
+	int b;
+	scanf("%d", &b);
+
+	closesocket(serverSocket);
+
 	WSACleanup();
 	return 0;
 }
