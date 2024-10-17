@@ -175,7 +175,7 @@ public:
 	}
 	void PushSize()
 	{
-		unsigned int netData = htonl(static_cast<unsigned int>(Size()));
+		unsigned int netData = htonl(static_cast<unsigned int>(GetBodySize()));
 
 		for (int i = Packet::HEADER_SIZE - 1; i >= 0; --i)
 			this->data.push_front(reinterpret_cast<uint8_t*>(&netData)[i]);
@@ -301,7 +301,7 @@ public:
 		marker = offset;
 		offset = 0;
 	}
-	int Size()
+	int GetBodySize()
 	{
 		return marker;
 	}

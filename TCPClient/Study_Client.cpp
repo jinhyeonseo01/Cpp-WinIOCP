@@ -99,7 +99,7 @@ int main(int argc, char* argv[])
 			break;
 
 		SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
-		printf("전송중 : %lf%%    \n", packet.Offset() / (double)packet.Size() * 100);
+		printf("전송중 : %lf%%    \n", packet.Offset() / (double)packet.GetBodySize() * 100);
 
 	}
 

@@ -102,46 +102,48 @@ inline bool SocketCheck(int code)
 class Packet
 {
 public:
-	static int HEADER_SIZE;
+	static unsigned long long int HEADER_SIZE;
 public:
-	int bodySize = 0;
-	std::deque<uint8_t> data;
+	std::vector<uint8_t> packetData;
 	int offset = 0;
 	int marker = 0;
+
+	Packet()
+	{
+		PushData(sizeof(HEADER_SIZE));
+	}
+	virtual ~Packet()
+	{
+
+	}
 
 	void PushData(const unsigned long long int& data)
 	{
 		unsigned long long int netData = htonll(data);
-		this->data.resize(this->data.size() + 8);
-		this->data[offset++] = reinterpret_cast<uint8_t*>(&netData)[0];
-		this->data[offset++] = reinterpret_cast<uint8_t*>(&netData)[1];
-		this->data[offset++] = reinterpret_cast<uint8_t*>(&netData)[2];
-		this->data[offset++] = reinterpret_cast<uint8_t*>(&netData)[3];
-		this->data[offset++] = reinterpret_cast<uint8_t*>(&netData)[4];
-		this->data[offset++] = reinterpret_cast<uint8_t*>(&netData)[5];
-		this->data[offset++] = reinterpret_cast<uint8_t*>(&netData)[6];
-		this->data[offset++] = reinterpret_cast<uint8_t*>(&netData)[7];
+		this->packetData.resize(this->packetData.size() + 8);
+		std::memcpy(&this->packetData[offset], &netData, 8);
+
 	}
 	void PushData(const unsigned int& data)
 	{
 		unsigned int netData = htonl(data);
-		this->data.resize(this->data.size() + 4);
-		this->data[offset++] = reinterpret_cast<uint8_t*>(&netData)[0];
-		this->data[offset++] = reinterpret_cast<uint8_t*>(&netData)[1];
-		this->data[offset++] = reinterpret_cast<uint8_t*>(&netData)[2];
-		this->data[offset++] = reinterpret_cast<uint8_t*>(&netData)[3];
+		this->packetData.resize(this->packetData.size() + 4);
+		this->packetData[offset++] = reinterpret_cast<uint8_t*>(&netData)[0];
+		this->packetData[offset++] = reinterpret_cast<uint8_t*>(&netData)[1];
+		this->packetData[offset++] = reinterpret_cast<uint8_t*>(&netData)[2];
+		this->packetData[offset++] = reinterpret_cast<uint8_t*>(&netData)[3];
 	}
 	void PushData(const unsigned short& data)
 	{
 		unsigned short netData = htons(data);
-		this->data.resize(this->data.size() + 2);
-		this->data[offset++] = reinterpret_cast<uint8_t*>(&netData)[0];
-		this->data[offset++] = reinterpret_cast<uint8_t*>(&netData)[1];
+		this->packetData.resize(this->packetData.size() + 2);
+		this->packetData[offset++] = reinterpret_cast<uint8_t*>(&netData)[0];
+		this->packetData[offset++] = reinterpret_cast<uint8_t*>(&netData)[1];
 	}
 	void PushData(const unsigned char& data)
 	{
-		this->data.resize(this->data.size() + 1);
-		this->data[offset++] = data;
+		this->packetData.resize(this->packetData.size() + 1);
+		this->packetData[offset++] = data;
 	}
 	void PushData(const long long int& data)
 	{
@@ -175,47 +177,46 @@ public:
 	}
 	void PushSize()
 	{
-		unsigned int netData = htonl(static_cast<unsigned int>(Size()));
+		unsigned int netData = htonl(static_cast<unsigned int>(GetBodySize()));
 
-		for (int i = Packet::HEADER_SIZE - 1; i >= 0; --i)
-			this->data.push_front(reinterpret_cast<uint8_t*>(&netData)[i]);
+		memcpy(this->packetData.data(), &netData, GetBodySize());
 		marker += Packet::HEADER_SIZE;
 
 	}
 	void PopData(unsigned long long int& data)
 	{
 		unsigned long long netData = 0;
-		reinterpret_cast<uint8_t*>(&netData)[0] = this->data[offset++];
-		reinterpret_cast<uint8_t*>(&netData)[1] = this->data[offset++];
-		reinterpret_cast<uint8_t*>(&netData)[2] = this->data[offset++];
-		reinterpret_cast<uint8_t*>(&netData)[3] = this->data[offset++];
-		reinterpret_cast<uint8_t*>(&netData)[4] = this->data[offset++];
-		reinterpret_cast<uint8_t*>(&netData)[5] = this->data[offset++];
-		reinterpret_cast<uint8_t*>(&netData)[6] = this->data[offset++];
-		reinterpret_cast<uint8_t*>(&netData)[7] = this->data[offset++];
+		reinterpret_cast<uint8_t*>(&netData)[0] = this->packetData[offset++];
+		reinterpret_cast<uint8_t*>(&netData)[1] = this->packetData[offset++];
+		reinterpret_cast<uint8_t*>(&netData)[2] = this->packetData[offset++];
+		reinterpret_cast<uint8_t*>(&netData)[3] = this->packetData[offset++];
+		reinterpret_cast<uint8_t*>(&netData)[4] = this->packetData[offset++];
+		reinterpret_cast<uint8_t*>(&netData)[5] = this->packetData[offset++];
+		reinterpret_cast<uint8_t*>(&netData)[6] = this->packetData[offset++];
+		reinterpret_cast<uint8_t*>(&netData)[7] = this->packetData[offset++];
 		data = ntohll(netData);
 	}
 	void PopData(unsigned int& data)
 	{
 		unsigned int netData = 0;
-		reinterpret_cast<uint8_t*>(&netData)[0] = this->data[offset++];
-		reinterpret_cast<uint8_t*>(&netData)[1] = this->data[offset++];
-		reinterpret_cast<uint8_t*>(&netData)[2] = this->data[offset++];
-		reinterpret_cast<uint8_t*>(&netData)[3] = this->data[offset++];
+		reinterpret_cast<uint8_t*>(&netData)[0] = this->packetData[offset++];
+		reinterpret_cast<uint8_t*>(&netData)[1] = this->packetData[offset++];
+		reinterpret_cast<uint8_t*>(&netData)[2] = this->packetData[offset++];
+		reinterpret_cast<uint8_t*>(&netData)[3] = this->packetData[offset++];
 
 		data = ntohl(netData);
 	}
 	void PopData(unsigned short& data)
 	{
 		unsigned short netData = 0;
-		reinterpret_cast<uint8_t*>(&netData)[0] = this->data[offset++];
-		reinterpret_cast<uint8_t*>(&netData)[1] = this->data[offset++];
+		reinterpret_cast<uint8_t*>(&netData)[0] = this->packetData[offset++];
+		reinterpret_cast<uint8_t*>(&netData)[1] = this->packetData[offset++];
 
 		data = ntohs(netData);
 	}
 	void PopData(unsigned char& data)
 	{
-		data = this->data[offset++];
+		data = this->packetData[offset++];
 	}
 	void PopData(long long int& data)
 	{
@@ -253,22 +254,78 @@ public:
 		PopData(temp);
 		data = *reinterpret_cast<double*>(&temp);
 	}
+	template<class T>
+	T PopData()
+	{
+		T temp;
+		PopData(temp);
+		return temp;
+	}
+	template<class T>
+	T PeekData()
+	{
+		T temp;
+		int prevOffset = this->offset;
+		PopData(temp);
+		this->offset = prevOffset;
+		return temp;
+	}
+	template<class T>
+	void PeekData(T& t)
+	{
+		int prevOffset = this->offset;
+		PopData(t);
+		this->offset = prevOffset;
+	}
+	void PeekData(char* data, int& size)
+	{
+		Copy(data, size);
+	}
+	void PopData(char* data, int& size)
+	{
+		Copy(data, size);
+		offset += size;
+	}
+	template<class T, class = std::enable_if_t<std::is_base_of_v<std::input_iterator_tag, typename std::iterator_traits<T>::iterator_category>>>
+	void PopData(T iter, int& size)
+	{
+		for (int i = 0; i < size; i++)
+		{
+			*iter = PopData<T>();
+			offset += size;
+			++iter;
+		}
+	}
 
 	void Marking()
 	{
 		marker = offset;
 		offset = 0;
 	}
-	int Size()
+	int GetBodySize() const
 	{
 		return marker;
+	}
+
+	static int GetBodyOffset()
+	{
+		return sizeof(HEADER_SIZE);
+	}
+	int GetTotalSize() const
+	{
+		return marker - GetBodyOffset();
+	}
+	int Offset()
+	{
+		return offset;
 	}
 	void Copy(char* data, int& size)
 	{
 		size = min(max(Size() - offset, 0), size);
 		for (int i = 0; i < size; i++)
-			memcpy(&data[i], &this->data[offset + i], 1);
+			memcpy(&data[i], &this->packetData[offset + i], 1);
 	}
+
 	void Clear()
 	{
 		offset = 0;
@@ -277,6 +334,10 @@ public:
 	void OffsetClear()
 	{
 		offset = 0;
+	}
+	void BackOffset(int trySize, int realSize)
+	{
+		offset -= trySize - realSize;
 	}
 };
 
