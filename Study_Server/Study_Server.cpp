@@ -1,5 +1,15 @@
-﻿#include "Common.h"
+﻿#include <mutex>
 
+#include "Common.h"
+
+
+std::mutex mutex;
+void WriteProgress(double per, COORD coord)
+{
+	std::lock_guard<std::mutex> lock(mutex);
+	SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
+	std::cout << "수신률 : " << (per) * 100 << "     \n";
+}
 
 // 클라이언트와 데이터 통신
 DWORD WINAPI ProcessClient(LPVOID arg)
@@ -15,8 +25,11 @@ DWORD WINAPI ProcessClient(LPVOID arg)
 	inet_ntop(AF_INET, &clientaddr.sin_addr, addr, sizeof(addr));
 
 	printf("[TCP 서버] 클라이언트 접속: IP 주소=%s, 포트 번호=%d\n", addr, ntohs(clientaddr.sin_port));
-
-	std::array<char, 1024> tempBuffer;
+	CONSOLE_SCREEN_BUFFER_INFO csbi;
+	GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
+	COORD coord = csbi.dwCursorPosition;
+	std::cout << "\n";
+	std::array<char, 1024*32> tempBuffer;
 	Packet packet;
 	while (true)
 	{
@@ -27,16 +40,14 @@ DWORD WINAPI ProcessClient(LPVOID arg)
 		packet.PushData(tempBuffer.begin(), tempBuffer.begin() + receiveSize);
 		packet.Marking();
 		int bodySize = packet.PeekData<int>();
-		CONSOLE_SCREEN_BUFFER_INFO csbi;
-		GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
-		COORD coord = csbi.dwCursorPosition;
 		while(packet.Offset() < bodySize)
 		{
 			receiveSize = min(bodySize - packet.Offset(), tempBuffer.size());
 			receiveSize = recv(clientSocket, tempBuffer.data(), receiveSize, MSG_WAITALL);
+			if (receiveSize < 0)
+				return 0;
 			packet.PushData(tempBuffer.begin(), tempBuffer.begin() + receiveSize);
-			SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
-			std::cout << "수신률 : " << (packet.Offset() / (double)bodySize) * 100 << "     \n";
+			WriteProgress(packet.Offset() / (double)bodySize, coord);
 		}
 		packet.Marking();
 		int fileNameSize = static_cast<int>(packet.PopData<unsigned long long int>());
@@ -45,11 +56,23 @@ DWORD WINAPI ProcessClient(LPVOID arg)
 		packet.PopData((char*)fileName.data(), fileNameSize);
 		int fileSize = static_cast<int>(packet.PopData<long long int>());
 		std::deque<char> fileData;
-		std::ofstream os{ fileName };
+		for(auto it = fileName.rbegin(); it != fileName.rend();++it)
+		{
+			if(*it == '\\')
+			{
+				auto base_it = it.base();
+				fileName = std::string(base_it, fileName.end());
+				break;
+			}
+		}
+		std::cout << "파일 저장" << fileName << "\n";
+		std::ofstream os{ fileName , std::ios::binary };
 		for (int i = 0; i < fileSize; i++) {
 			char data = packet.PopData<char>();
 			os.write(&data, 1);
 		}
+		packet.Clear();
+		std::cout << "완료\n";
 	}
 	closesocket(clientSocket);
 	printf("[TCP 서버] 클라이언트 종료: IP 주소=%s, 포트 번호=%d\n", addr, ntohs(clientaddr.sin_port));
